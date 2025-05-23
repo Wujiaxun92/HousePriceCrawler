@@ -8,24 +8,22 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-# 初始化 WebDriver
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
 driver.implicitly_wait(5)
 
-# 目標網站 URL
 url = "https://www.hbhousing.com.tw/BuyHouse/%E5%8F%B0%E5%8C%97%E5%B8%82/"
 driver.get(url)
 
-# 取得當前時間，並格式化為抓取時間，用於檔案命名
+
 current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 csv_filename = f"住商不動產_台北市_{current_time}.csv"
 
-# 開啟 CSV 檔案以寫入資料
+
 with open(csv_filename, mode='w', newline='', encoding='utf-8-sig') as file:
     writer = csv.writer(file)
-    writer.writerow(['抓取時間', '超連結', '物件標題', '資訊1', '資訊2'])  # 寫入表頭
+    writer.writerow(['抓取時間', '超連結', '物件標題', '資訊1', '資訊2'])
 
-    page_number = 1  # 用來追蹤當前頁碼
+    page_number = 1
 
     while True:
         try:

@@ -1,64 +1,71 @@
-import requests  # 下載套件
-from bs4 import BeautifulSoup  # 下載套件
-import time
-import csv
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
+import time, csv
 from datetime import datetime
 
-# 初始化儲存資料的列表
+# 設定 Selenium 瀏覽器
+options = webdriver.ChromeOptions()
+
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
 rows = []
-# 爬取 1 到 n 頁
+
+# 抓前兩頁
 for n in range(1, 3):
+    url = f'https://buy.yungching.com.tw/list/住宅_p/高雄市-_c/_rm?pg={n}'
+    driver.get(url)
+    time.sleep(5)  # 等待 JavaScript 載入
 
-    # 設定目標 URL，並將頁碼作為變數 `n` 插入
-    url = f'https://buy.yungching.com.tw/region/%E4%BD%8F%E5%AE%85_p/%E5%8F%B0%E5%8C%97%E5%B8%82-_c/_rm/{n}'
-    # 設定請求標頭，模擬瀏覽器請求
-    request_headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'}
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    cards = soup.find_all('a', class_='link')  # 每個房屋卡片都是一個 <a class="link">
 
-    # 發送 HTTP GET 請求並獲取 HTML 內容
-    html = requests.get(url, headers=request_headers)
-    # 使用 BeautifulSoup 解析 HTML
-    soup = BeautifulSoup(html.text, 'html.parser')
-
-    # 找到所有包含房屋物件的區塊
-    tags = soup.find_all('div', class_='item-info')
-
-    # 針對每個房屋物件區塊進行資料提取
-    for tag in tags:
+    for card in cards:
         row = []
-
-        # 抓取時間
-        catch_time = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+        catch_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         row.append(catch_time)
 
-        # 尋找 class 為 item-info-detail 的 ul 標籤
-        ul_tag = tag.find('ul', class_='item-info-detail')
+        # 房屋名稱
+        name = card.find('div', class_='caseName')
+        row.append(name.text.strip() if name else '無資料')
 
-        # 確保 ul_tag 存在
-        if ul_tag:
-            # 抓取 ul 中的所有 li 標籤
-            li_tags = ul_tag.find_all('li')
+        # 地址
+        addr = card.find('span', class_='address')
+        row.append(addr.text.strip() if addr else '無資料')
 
-            # 定義欄位列表，初始化為 '無資料'
-            fields = ['物件類型', '屋齡', '樓層', '坪數1', '坪數2', '坪數3', '格局', '備註']
-            li_contents = [li.text.strip() for li in li_tags]
+        # 類型
+        type_ = card.find('span', class_='caseType')
+        row.append(type_.text.strip() if type_ else '無資料')
 
-            # 將 li 內容填入對應欄位（若不足則補 '無資料'）
-            for i in range(len(fields)):
-                row.append(li_contents[i] if i < len(li_contents) else '無資料')
-        else:
-            # 若 ul 不存在，則填入 '無資料'
-            row.extend(['無資料'] * 8)
+        # 建坪
+        area = card.find('span', class_='regArea')
+        row.append(area.text.strip() if area else '無資料')
 
-        # 將所有資料加入到 rows 列表
+        # 樓層
+        floor = card.find('span', class_='floor')
+        row.append(floor.text.strip() if floor else '無資料')
+
+        # 格局
+        room = card.find('span', class_='room')
+        row.append(room.text.strip() if room else '無資料')
+
+        # 備註
+        note = card.find('span', class_='note')
+        row.append(note.text.strip() if note else '無資料')
+
+        # 房屋連結
+        href = card['href']
+        full_link = f'https://buy.yungching.com.tw/{href}'
+        row.append(full_link)
+
         rows.append(row)
 
-    # 增加延遲時間以避免被網站屏蔽
-    time.sleep(5)
+driver.quit()
 
-# 以當前時間命名並儲存為 CSV 檔案
-catch_time = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-with open(f'永慶房屋_li_{catch_time}.csv', 'w', newline='', encoding='utf-8-sig') as file:
-    data = csv.writer(file)
-    data.writerow(['抓取時間', '物件類型', '屋齡', '樓層', '坪數1', '坪數2', '坪數3', '格局', '備註'])
-    data.writerows(rows)
+# 存成 CSV
+catch_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+with open(f'永慶房屋_高雄_{catch_time}.csv', 'w', newline='', encoding='utf-8-sig') as f:
+    writer = csv.writer(f)
+    writer.writerow(['抓取時間', '名稱', '地址', '類型', '建坪', '樓層', '格局', '備註', '連結'])
+    writer.writerows(rows)
