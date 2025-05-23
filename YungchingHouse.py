@@ -13,7 +13,7 @@ driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), opti
 rows = []
 
 # 抓前兩頁
-for n in range(1, 3):
+for n in range(1, ):
     url = f'https://buy.yungching.com.tw/list/住宅_p/高雄市-_c/_rm?pg={n}'
     driver.get(url)
     time.sleep(5)  # 等待 JavaScript 載入
